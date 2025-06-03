@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Directional Chart</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f4f8; /* Light blue-gray background */
+            color: #2d3748; /* Darker text for readability */
+        }
+        .horoscope-grid {
+            display: grid;
+            /* Define a 3x3 grid for the cross layout */
+            grid-template-columns: 1fr 1fr 1fr;
+            grid-template-rows: auto auto auto;
+            gap: 1rem;
+            width: 100%;
+            max-width: 900px; /* Keep max-width */
+            margin: 0 auto; /* Center the grid */
+            /* Debugging: Uncomment the line below to see the grid container border */
+            /* border: 2px dashed rgba(0, 0, 0, 0.2); */
+        }
+        .direction-box {
+            border: 3px solid; /* Thicker border */
+            border-radius: 1rem; /* More rounded corners */
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            background-color: #ffffff;
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15); /* More prominent shadow */
+            transition: transform 0.2s ease-in-out; /* Add a subtle hover effect */
+        }
+        .direction-box:hover {
+            transform: translateY(-5px); /* Lift on hover */
+        }
+
+        /* Assign grid positions to each box for the new pictorial layout */
+        /* East at the top, spanning center column */
+        #eastBox {
+            grid-column: 2 / span 1; /* Center column */
+            grid-row: 1; /* Top row */
+            border-color: #ef4444; /* Red */
+            background: linear-gradient(145deg, #fee2e2, #fecaca); /* Light red gradient */
+        }
+        /* West on the left, spanning center row */
+        #westBox {
+            grid-column: 2 / span 1; /* Left column */
+            grid-row: 3; /* Middle row */
+            border-color: #6366f1; /* Indigo */
+            background: linear-gradient(145deg, #e0e7ff, #c7d2fe); /* Light indigo gradient */
+        }
+        /* South on the right, spanning center row */
+        #southBox {
+            grid-column: 3 / span 1; /* Right column */
+            grid-row: 2; /* Middle row */
+            border-color: #22c55e; /* Green */
+            background: linear-gradient(145deg, #dcfce7, #bbf7d0); /* Light green gradient */
+        }
+        /* North at the bottom, spanning center column */
+        #northBox {
+            grid-column: 1 / span 1; /* Center column */
+            grid-row: 2; /* Bottom row */
+            border-color: #3b82f6; /* Blue */
+            background: linear-gradient(145deg, #e0f2fe, #bfdbfe); /* Light blue gradient */
+        }
+
+        /* Center image styling */
+        .center-image-container {
+            grid-column: 2 / span 1; /* Center column */
+            grid-row: 2; /* Middle row */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.5rem; /* Add some padding around the image */
+        }
+        .center-image-container img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 0.5rem; /* Slightly rounded corners for the image */
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Subtle shadow for the image */
+        }
+
+        /* Adjust text colors within boxes for better contrast with gradients */
+        #eastBox h3, #eastBox .element-text, #eastBox .rasi-symbols { color: #b91c1c; } /* Darker red */
+        #westBox h3, #westBox .element-text, #westBox .rasi-symbols { color: #4338ca; } /* Darker indigo */
+        #southBox h3, #southBox .element-text, #southBox .rasi-symbols { color: #166534; } /* Darker green */
+        #northBox h3, #northBox .element-text, #northBox .rasi-symbols { color: #1e40af; } /* Darker blue */
+
+
+        /* Add a subtle animation to the main title */
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+            100% { transform: scale(1); }
+        }
+        h1 {
+            animation: pulse 2s infinite ease-in-out;
+        }
+
+        .planet-item {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            padding: 0.25rem 0;
+            border-bottom: 1px dashed #e2e8f0; /* Light dashed separator */
+        }
+        .planet-item:last-child {
+            border-bottom: none; /* No border for the last item */
+        }
+        .rasi-symbol {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+        .element-text {
+            font-weight: 600;
+            color: #4a5568; /* Slightly darker gray for element */
+            margin-top: 0.5rem;
+        }
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        select, input[type="number"], textarea {
+            border: 1px solid #cbd5e0; /* Light gray border */
+            border-radius: 0.375rem; /* Slightly rounded corners */
+            padding: 0.5rem 0.75rem;
+            font-size: 1rem;
+            background-color: #ffffff;
+            color: #2d3748;
+        }
+        /* Button styles */
+        .btn-primary {
+            background-color: #4299e1; /* Blue */
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            transition: background-color 0.2s ease-in-out;
+        }
+        .btn-primary:hover {
+            background-color: #3182ce; /* Darker blue on hover */
+        }
+        .btn-secondary {
+            background-color: #10b981; /* Green */
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            transition: background-color 0.2s ease-in-out;
+        }
+        .btn-secondary:hover {
+            background-color: #059669; /* Darker green on hover */
+        }
+
+        .message-box {
+            background-color: #fefcbf; /* Light yellow for messages */
+            color: #8b5f00; /* Dark yellow text */
+            padding: 1rem;
+            border-radius: 0.5rem;
+            margin-top: 1rem;
+            border: 1px solid #ecc94b; /* Yellow border */
+            display: none; /* Hidden by default */
+        }
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .horoscope-grid {
+                grid-template-columns: 1fr; /* Stack boxes on small screens */
+                grid-template-rows: auto;
+            }
+            /* Reset grid positions for stacking on smaller screens */
+            #eastBox, #westBox, #southBox, #northBox, .center-image-container {
+                grid-column: auto;
+                grid-row: auto;
+            }
+            .input-section {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body class="p-6">
+    <div class="max-w-4xl mx-auto bg-white p-8 rounded-xl shadow-lg">
+        <h1 class="text-3xl font-bold text-center mb-6 text-blue-700">Bhrigu Nandi Nadi Horoscope App</h1>
+
+        <div class="mb-8 p-6 bg-gray-50 rounded-lg shadow-inner">
+            <h2 class="text-2xl font-semibold mb-4 text-gray-800">Paste Planet Data</h2>
+            <textarea id="pasteDataInput" class="w-full h-48 p-3 border border-gray-300 rounded-md resize-y focus:outline-none focus:ring-blue-500 focus:border-blue-500" placeholder="Paste your planet data here..."></textarea>
+            <button id="parseDataBtn" class="w-full mt-4 btn-secondary">Parse & Populate Data</button>
+            <p class="text-sm text-gray-600 mt-2">Paste data in the format: "Body Longitude Nakshatra Pada Rasi Navamsa"</p>
+            <p class="text-sm text-gray-600">Example: "Sun - BK 17 Ta 49' 53.71" Rohi 3 Ta Ge" or "Saturn (R) 6 Pi 22' 42.20" UBha 1 Pi Le"</p>
+            <div id="messageBox" class="message-box"></div>
+        </div>
+
+        <div class="mb-8 p-6 bg-gray-50 rounded-lg shadow-inner">
+            <h2 class="text-2xl font-semibold mb-4 text-gray-800">Or Enter Planet Locations Manually</h2>
+            <div id="planetInputs" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+                </div>
+            <button id="generateHoroscopeBtn" class="w-full btn-primary">Generate Horoscope</button>
+        </div>
+
+        <div class="p-6 bg-gray-50 rounded-lg shadow-inner">
+            <h2 class="text-2xl font-semibold text-center mb-6 text-gray-800">Directional Chart</h2>
+            <div class="horoscope-grid">
+                <div id="eastBox" class="direction-box">
+                    <h3 class="text-xl font-bold text-red-600 mb-2">East</h3>
+                    <p class="element-text text-red-700">Agni (Fire)</p>
+                    <div class="rasi-symbols text-red-500 text-lg my-2">
+                        <span class="rasi-symbol">♈</span> Aries <br>
+                        <span class="rasi-symbol">♌</span> Leo <br>
+                        <span class="rasi-symbol">♐</span> Sagittarius
+                    </div>
+                    <div id="eastPlanets" class="w-full mt-4"></div>
+                </div>
+                <div id="westBox" class="direction-box">
+                    <h3 class="text-xl font-bold text-indigo-600 mb-2">West</h3>
+                    <p class="element-text text-indigo-700">Vayu (Air)</p>
+                    <div class="rasi-symbols text-indigo-500 text-lg my-2">
+                        <span class="rasi-symbol">♊</span> Gemini <br>
+                        <span class="rasi-symbol">♎</span> Libra <br>
+                        <span class="rasi-symbol">♒</span> Aquarius
+                    </div>
+                    <div id="westPlanets" class="w-full mt-4"></div>
+                </div>
+                <div class="center-image-container">
+                    <img src="Blank_North Indian.jpg" alt="North Indian Kundli Chakra" onerror="this.onerror=null;this.src='https://placehold.co/150x150/cccccc/000000?text=Chart+Image';">
+                </div>
+                <div id="southBox" class="direction-box">
+                    <h3 class="text-xl font-bold text-green-600 mb-2">South</h3>
+                    <p class="element-text text-green-700">Prithvi (Earth)</p>
+                    <div class="rasi-symbols text-green-500 text-lg my-2">
+                        <span class="rasi-symbol">♉</span> Taurus <br>
+                        <span class="rasi-symbol">♍</span> Virgo <br>
+                        <span class="rasi-symbol">♑</span> Capricorn
+                    </div>
+                    <div id="southPlanets" class="w-full mt-4"></div>
+                </div>
+                <div id="northBox" class="direction-box">
+                    <h3 class="text-xl font-bold text-blue-600 mb-2">North</h3>
+                    <p class="element-text text-blue-700">Jal (Water)</p>
+                    <div class="rasi-symbols text-blue-500 text-lg my-2">
+                        <span class="rasi-symbol">♋</span> Cancer <br>
+                        <span class="rasi-symbol">♏</span> Scorpio <br>
+                        <span class="rasi-symbol">♓</span> Pisces
+                    </div>
+                    <div id="northPlanets" class="w-full mt-4"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Define the planets to be used in the input form
+        const planets = [
+            'Sun', 'Moon', 'Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn', 'Rahu', 'Ketu'
+        ];
+
+        // Define Rasi (Zodiac Sign) data including symbol, element, and abbreviation
+        // The 'direction' property here refers to the astrological direction, not the display position.
+        const rasiData = {
+            'Aries': { symbol: '♈', element: 'Agni', direction: 'East', abbr: 'Ar' },
+            'Taurus': { symbol: '♉', element: 'Prithvi', direction: 'South', abbr: 'Ta' },
+            'Gemini': { symbol: '♊', element: 'Vayu', direction: 'West', abbr: 'Ge' },
+            'Cancer': { symbol: '♋', element: 'Jal', direction: 'North', abbr: 'Cn' },
+            'Leo': { symbol: '♌', element: 'Agni', direction: 'East', abbr: 'Le' },
+            'Virgo': { symbol: '♍', element: 'Prithvi', direction: 'South', abbr: 'Vi' },
+            'Libra': { symbol: '♎', element: 'Vayu', direction: 'West', abbr: 'Li' },
+            'Scorpio': { symbol: '♏', element: 'Jal', direction: 'North', abbr: 'Sc' },
+            'Sagittarius': { symbol: '♐', element: 'Agni', direction: 'East', abbr: 'Sg' },
+            'Capricorn': { symbol: '♑', element: 'Prithvi', direction: 'South', abbr: 'Cp' },
+            'Aquarius': { symbol: '♒', element: 'Vayu', direction: 'West', abbr: 'Aq' },
+            'Pisces': { symbol: '♓', element: 'Jal', direction: 'North', abbr: 'Pi' }
+        };
+
+        // Create a reverse mapping for abbreviations to full Rasi names for parsing
+        const rasiAbbrToFull = {};
+        for (const rasi in rasiData) {
+            rasiAbbrToFull[rasiData[rasi].abbr] = rasi;
+        }
+
+        // Get references to DOM elements
+        const planetInputsDiv = document.getElementById('planetInputs');
+        const generateHoroscopeBtn = document.getElementById('generateHoroscopeBtn');
+        const pasteDataInput = document.getElementById('pasteDataInput');
+        const parseDataBtn = document.getElementById('parseDataBtn');
+        const messageBox = document.getElementById('messageBox');
+
+        // References to planet display containers (updated to reflect new display positions)
+        const eastPlanetsDiv = document.getElementById('eastPlanets'); // This is the top box
+        const southPlanetsDiv = document.getElementById('southPlanets'); // This is the right box
+        const westPlanetsDiv = document.getElementById('westPlanets'); // This is the left box
+        const northPlanetsDiv = document.getElementById('northPlanets'); // This is the bottom box
+
+        /**
+         * Displays a message in the message box.
+         * @param {string} message - The message to display.
+         * @param {string} type - 'error' for error messages (red), 'info' for general info (yellow).
+         */
+        function showMessage(message, type = 'info') {
+            messageBox.textContent = message;
+            messageBox.style.display = 'block';
+            if (type === 'error') {
+                messageBox.classList.remove('bg-fefcbf', 'text-8b5f00', 'border-ecc94b');
+                messageBox.classList.add('bg-red-100', 'text-red-700', 'border-red-400');
+            } else {
+                messageBox.classList.remove('bg-red-100', 'text-red-700', 'border-red-400');
+                messageBox.classList.add('bg-fefcbf', 'text-8b5f00', 'border-ecc94b');
+            }
+            // Hide message after 5 seconds
+            setTimeout(() => {
+                messageBox.style.display = 'none';
+            }, 5000);
+        }
+
+        /**
+         * Initializes the planet individual input fields in the form.
+         */
+        function initializePlanetInputs() {
+            planets.forEach(planet => {
+                const inputGroup = document.createElement('div');
+                inputGroup.className = 'input-group';
+                inputGroup.innerHTML = `
+                    <label for="${planet.toLowerCase()}Rasi" class="block text-sm font-medium text-gray-700">${planet} Rasi:</label>
+                    <select id="${planet.toLowerCase()}Rasi" class="rasi-select mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
+                        <option value="">Select Rasi</option>
+                        ${Object.keys(rasiData).map(rasi => `<option value="${rasi}">${rasi} (${rasiData[rasi].symbol})</option>`).join('')}
+                    </select>
+                    <label for="${planet.toLowerCase()}Degree" class="block text-sm font-medium text-gray-700 mt-2">${planet} Degree:</label>
+                    <input type="number" id="${planet.toLowerCase()}Degree" min="0" max="29.99" step="0.01" placeholder="0.00 - 29.99" class="degree-input mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
+                `;
+                planetInputsDiv.appendChild(inputGroup);
+            });
+        }
+
+        /**
+         * Clears all planet displays in the horoscope boxes.
+         */
+        function clearHoroscopeDisplay() {
+            eastPlanetsDiv.innerHTML = '';
+            southPlanetsDiv.innerHTML = '';
+            westPlanetsDiv.innerHTML = '';
+            northPlanetsDiv.innerHTML = '';
+        }
+
+        /**
+         * Converts degrees, minutes, and seconds into a single decimal degree.
+         * @param {number} degrees - The degree part.
+         * @param {number} minutes - The minute part.
+         * @param {number} seconds - The second part.
+         * @returns {number} The total longitude in decimal degrees.
+         */
+        function convertToDecimalDegree(degrees, minutes, seconds) {
+            return degrees + (minutes / 60) + (seconds / 3600);
+        }
+
+        /**
+         * Converts a decimal degree value (0-29.99) into degrees, minutes, and seconds string.
+         * @param {number} decimalDegree - The degree value in decimal (e.g., 15.23).
+         * @returns {string} The formatted string (e.g., "15° 13' 48.00"").
+         */
+        function convertDecimalToDMSString(decimalDegree) {
+            const deg = Math.floor(decimalDegree);
+            const minutesDecimal = (decimalDegree - deg) * 60;
+            const min = Math.floor(minutesDecimal);
+            const secondsDecimal = (minutesDecimal - min) * 60;
+            const sec = secondsDecimal.toFixed(2); // Keep two decimal places for seconds
+
+            return `${deg}° ${min}' ${sec}"`;
+        }
+
+        /**
+         * Parses the pasted data and populates the individual planet input fields.
+         */
+        function parseAndPopulateData() {
+            const pastedText = pasteDataInput.value;
+            const lines = pastedText.split('\n');
+            // Process only the first 15 lines
+            const relevantLines = lines.slice(0, 15);
+            let parsedCount = 0;
+
+            // Clear existing inputs before populating
+            planets.forEach(planetName => {
+                const rasiSelect = document.getElementById(`${planetName.toLowerCase()}Rasi`);
+                const degreeInput = document.getElementById(`${planetName.toLowerCase()}Degree`);
+                if (rasiSelect) rasiSelect.value = '';
+                if (degreeInput) degreeInput.value = '';
+            });
+
+            relevantLines.forEach(line => {
+                const trimmedLine = line.trim();
+                if (!trimmedLine) return; // Skip empty lines
+
+                // Regex to capture the planet name and then longitude, ignoring specified keywords.
+                // It looks for a planet name, then optionally skips any combination of:
+                // - whitespace followed by "(R)"
+                // - whitespace followed by "-" and then one or more letters (like " - BK", " - PiK")
+                // - general whitespace
+                // This is done non-greedily `*?` to ensure it doesn't consume the longitude parts.
+                const regex = new RegExp(`^(${planets.join('|')})\\s*(?:\\s*\\(R\\)|\\s*-\\s*[A-Za-z]+|\\s+)*?(\\d{1,2})\\s+([A-Za-z]{2})\\s+(\\d{1,2})'\\s+(\\d{1,2}(?:\\.\\d{1,2})?)"`);
+                const match = trimmedLine.match(regex);
+
+                if (match) {
+                    const planetName = match[1];
+                    const degreePart = parseInt(match[2]);
+                    const rasiAbbr = match[3];
+                    const minutePart = parseInt(match[4]);
+                    const secondPart = parseFloat(match[5]);
+
+                    const fullRasiName = rasiAbbrToFull[rasiAbbr];
+
+                    if (fullRasiName) {
+                        const rasiSelect = document.getElementById(`${planetName.toLowerCase()}Rasi`);
+                        const degreeInput = document.getElementById(`${planetName.toLowerCase()}Degree`);
+
+                        if (rasiSelect && degreeInput) {
+                            const decimalDegree = convertToDecimalDegree(degreePart, minutePart, secondPart);
+                            rasiSelect.value = fullRasiName;
+                            // Ensure the degree displayed in the input field is within the 0-29.99 range
+                            degreeInput.value = (decimalDegree % 30).toFixed(2);
+                            parsedCount++;
+                        } else {
+                            console.warn(`Could not find input fields for ${planetName}`);
+                        }
+                    } else {
+                        console.warn(`Unknown Rasi abbreviation: ${rasiAbbr} in line: "${trimmedLine}"`);
+                    }
+                } else {
+                    console.warn(`No match found for line: "${trimmedLine}"`);
+                }
+            });
+
+            if (parsedCount > 0) {
+                showMessage(`Successfully parsed and populated data for ${parsedCount} planets. Click 'Generate Horoscope' to view the chart.`, 'info');
+            } else {
+                showMessage('No valid planet data found in the pasted text. Please check the format.', 'error');
+            }
+        }
+
+        /**
+         * Generates and displays the horoscope based on user input from individual fields.
+         */
+        function generateHoroscope() {
+            clearHoroscopeDisplay(); // Clear previous display
+
+            // Map astrological directions to their display positions
+            const displayPositionToPlanets = {
+                'East': [],  // This will be the top box
+                'South': [], // This will be the right box
+                'West': [],  // This will be the left box
+                'North': []  // This will be the bottom box
+            };
+
+            let isValid = true; // Flag to check if all inputs are valid
+
+            planets.forEach(planetName => {
+                const rasiSelect = document.getElementById(`${planetName.toLowerCase()}Rasi`);
+                const degreeInput = document.getElementById(`${planetName.toLowerCase()}Degree`);
+
+                const rasi = rasiSelect.value;
+                const degree = parseFloat(degreeInput.value);
+
+                // Input validation
+                if (!rasi) {
+                    // Only show error if degree is also entered, implying an attempt to enter data
+                    if (degreeInput.value !== '') {
+                        showMessage(`Please select a Rasi for ${planetName}.`, 'error');
+                        isValid = false;
+                    }
+                    return; // Skip this planet if Rasi is not selected or degree is empty
+                }
+                if (isNaN(degree) || degree < 0 || degree >= 30) {
+                    showMessage(`Please enter a valid degree (0.00 - 29.99) for ${planetName}.`, 'error');
+                    isValid = false;
+                    return; // Skip this planet if degree is invalid
+                }
+
+                const planetInfo = {
+                    name: planetName,
+                    rasi: rasi,
+                    degree: degree // Store as decimal for sorting
+                };
+
+                const astrologicalDirection = rasiData[rasi].direction;
+                if (astrologicalDirection) {
+                    displayPositionToPlanets[astrologicalDirection].push(planetInfo);
+                }
+            });
+
+            if (!isValid) {
+                return; // Stop if any input was invalid
+            }
+
+            // Sort planets within each astrological direction and render them to their respective display boxes
+            for (const astrologicalDirection in displayPositionToPlanets) {
+                displayPositionToPlanets[astrologicalDirection].sort((a, b) => a.degree - b.degree); // Sort by degree
+
+                let targetDiv;
+                if (astrologicalDirection === 'East') {
+                    targetDiv = eastPlanetsDiv; // East is top
+                } else if (astrologicalDirection === 'South') {
+                    targetDiv = southPlanetsDiv; // South is right
+                } else if (astrologicalDirection === 'West') {
+                    targetDiv = westPlanetsDiv; // West is left
+                } else if (astrologicalDirection === 'North') {
+                    targetDiv = northPlanetsDiv; // North is bottom
+                }
+
+                if (targetDiv) {
+                    if (displayPositionToPlanets[astrologicalDirection].length === 0) {
+                        targetDiv.innerHTML = '<p class="text-gray-500 text-sm">No planets in this section.</p>';
+                    } else {
+                        displayPositionToPlanets[astrologicalDirection].forEach(planet => {
+                            const planetDiv = document.createElement('div');
+                            planetDiv.className = 'planet-item';
+                            // Display degree in DMS format
+                            const dmsString = convertDecimalToDMSString(planet.degree);
+                            planetDiv.innerHTML = `
+                                <span class="font-medium">${planet.name}</span>
+                                <span class="text-gray-600">${planet.rasi} (${dmsString})</span>
+                            `;
+                            targetDiv.appendChild(planetDiv);
+                        });
+                    }
+                }
+            }
+            showMessage('Horoscope generated successfully!', 'info');
+        }
+
+        // Event Listeners
+        generateHoroscopeBtn.addEventListener('click', generateHoroscope);
+        parseDataBtn.addEventListener('click', parseAndPopulateData);
+
+        // Initialize the input fields when the page loads
+        window.onload = initializePlanetInputs;
+
+    </script>
+</body>
+</html>

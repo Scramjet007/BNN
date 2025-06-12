@@ -21,8 +21,6 @@
             width: 100%;
             max-width: 900px; /* Keep max-width */
             margin: 0 auto; /* Center the grid */
-            /* Debugging: Uncomment the line below to see the grid container border */
-            /* border: 2px dashed rgba(0, 0, 0, 0.2); */
         }
         .direction-box {
             border: 3px solid; /* Thicker border */
@@ -169,6 +167,34 @@
             border: 1px solid #ecc94b; /* Yellow border */
             display: none; /* Hidden by default */
         }
+
+        /* Karaka Analysis Boxes */
+        .karaka-result-box {
+            border: 2px solid;
+            border-radius: 0.75rem;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .karaka-result-box .planets-list {
+            width: 100%;
+            margin-top: 0.5rem;
+        }
+        .karaka-result-box .planet-item {
+            font-size: 0.9rem;
+            padding: 0.15rem 0;
+            color: inherit; /* Inherit color from parent box */
+        }
+        .karaka-result-box.bg-green-100 { background-color: #dcfce7; border-color: #22c55e; color: #166534; }
+        .karaka-result-box.bg-blue-100 { background-color: #e0f2fe; border-color: #3b82f6; color: #1e40af; }
+        .karaka-result-box.bg-yellow-100 { background-color: #fef9c3; border-color: #facc15; color: #a16207; }
+        .karaka-result-box.bg-red-100 { background-color: #fee2e2; border-color: #ef4444; color: #b91c1c; }
+
+
         /* Responsive adjustments */
         @media (max-width: 768px) {
             .horoscope-grid {
@@ -182,6 +208,9 @@
             }
             .input-section {
                 flex-direction: column;
+            }
+            #karakaAnalysisResults {
+                grid-template-columns: 1fr; /* Stack karaka boxes on small screens */
             }
         }
     </style>
@@ -254,12 +283,45 @@
                 </div>
             </div>
         </div>
+
+        <!-- New Karaka Planet Analysis Section -->
+        <div class="mb-8 p-6 bg-gray-50 rounded-lg shadow-inner mt-8">
+            <h2 class="text-2xl font-semibold mb-4 text-gray-800">Karaka Planet Analysis</h2>
+            <div class="flex flex-col md:flex-row items-center space-y-4 md:space-y-0 md:space-x-4 mb-4">
+                <label for="karakaPlanetSelect" class="text-lg font-medium text-gray-700 md:w-1/3">Select Karaka Planet:</label>
+                <select id="karakaPlanetSelect" class="flex-grow border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                    <option value="">-- Select a Planet --</option>
+                    <!-- Options will be populated by JS -->
+                </select>
+            </div>
+            <button id="analyzeKarakaBtn" class="w-full mt-4 btn-primary">Analyze Karaka</button>
+
+            <div id="karakaAnalysisResults" class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6">
+                <div id="presentBox" class="karaka-result-box bg-green-100 border-green-500 text-green-800">
+                    <h4 class="font-bold text-xl mb-2">Present</h4>
+                    <div class="planets-list w-full"></div>
+                </div>
+                <div id="supportingBox" class="karaka-result-box bg-blue-100 border-blue-500 text-blue-800">
+                    <h4 class="font-bold text-xl mb-2">Supporting</h4>
+                    <div class="planets-list w-full"></div>
+                </div>
+                <div id="futureBox" class="karaka-result-box bg-yellow-100 border-yellow-500 text-yellow-800">
+                    <h4 class="font-bold text-xl mb-2">Future</h4>
+                    <div class="planets-list w-full"></div>
+                </div>
+                <div id="pastBox" class="karaka-result-box bg-red-100 border-red-500 text-red-800">
+                    <h4 class="font-bold text-xl mb-2">Past</h4>
+                    <div class="planets-list w-full"></div>
+                </div>
+            </div>
+        </div>
+
     </div>
 
-     <footer class="text-center mt-8 text-gray-500 text-sm">
+    <footer class="text-center mt-8 text-gray-500 text-sm">
         Crafted by Deepak Jain in reverence for the Rishis.
     </footer>
-    
+
     <script>
         // Define the planets to be used in the input form
         const planets = [
@@ -267,7 +329,7 @@
         ];
 
         // Define Rasi (Zodiac Sign) data including symbol, element, and abbreviation
-        // The 'direction' property here refers to the astrological direction, not the display position.
+        // The 'direction' property here refers to the astrological direction.
         const rasiData = {
             'Aries': { symbol: '♈', element: 'Agni', direction: 'East', abbr: 'Ar' },
             'Taurus': { symbol: '♉', element: 'Prithvi', direction: 'South', abbr: 'Ta' },
@@ -289,18 +351,54 @@
             rasiAbbrToFull[rasiData[rasi].abbr] = rasi;
         }
 
+        // Global variable to store parsed planet data for reuse in Karaka analysis
+        let parsedPlanetsData = [];
+
+        // Define directional relationships for Karaka analysis
+        const directionRelationships = {
+            'East': {
+                opposite: 'West',
+                clockwise90: 'South',
+                counterClockwise90: 'North' // Added for completeness, useful for finding 'remaining'
+            },
+            'South': {
+                opposite: 'North',
+                clockwise90: 'West',
+                counterClockwise90: 'East'
+            },
+            'West': {
+                opposite: 'East',
+                clockwise90: 'North',
+                counterClockwise90: 'South'
+            },
+            'North': {
+                opposite: 'South',
+                clockwise90: 'East',
+                counterClockwise90: 'West'
+            }
+        };
+
+
         // Get references to DOM elements
         const planetInputsDiv = document.getElementById('planetInputs');
         const generateHoroscopeBtn = document.getElementById('generateHoroscopeBtn');
         const pasteDataInput = document.getElementById('pasteDataInput');
         const parseDataBtn = document.getElementById('parseDataBtn');
         const messageBox = document.getElementById('messageBox');
+        const karakaPlanetSelect = document.getElementById('karakaPlanetSelect');
+        const analyzeKarakaBtn = document.getElementById('analyzeKarakaBtn');
 
-        // References to planet display containers (updated to reflect new display positions)
-        const eastPlanetsDiv = document.getElementById('eastPlanets'); // This is the top box
-        const southPlanetsDiv = document.getElementById('southPlanets'); // This is the right box
-        const westPlanetsDiv = document.getElementById('westPlanets'); // This is the left box
-        const northPlanetsDiv = document.getElementById('northPlanets'); // This is the bottom box
+        // References to planet display containers
+        const eastPlanetsDiv = document.getElementById('eastPlanets');
+        const southPlanetsDiv = document.getElementById('southPlanets');
+        const westPlanetsDiv = document.getElementById('westPlanets');
+        const northPlanetsDiv = document.getElementById('northPlanets');
+
+        const presentBox = document.getElementById('presentBox').querySelector('.planets-list');
+        const supportingBox = document.getElementById('supportingBox').querySelector('.planets-list');
+        const futureBox = document.getElementById('futureBox').querySelector('.planets-list');
+        const pastBox = document.getElementById('pastBox').querySelector('.planets-list');
+
 
         /**
          * Displays a message in the message box.
@@ -325,8 +423,12 @@
 
         /**
          * Initializes the planet individual input fields in the form.
+         * Also populates the Karaka Planet dropdown.
          */
         function initializePlanetInputs() {
+            planetInputsDiv.innerHTML = ''; // Clear existing inputs if any
+            karakaPlanetSelect.innerHTML = '<option value="">-- Select a Planet --</option>'; // Clear existing options
+
             planets.forEach(planet => {
                 const inputGroup = document.createElement('div');
                 inputGroup.className = 'input-group';
@@ -340,17 +442,28 @@
                     <input type="number" id="${planet.toLowerCase()}Degree" min="0" max="29.99" step="0.01" placeholder="0.00 - 29.99" class="degree-input mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
                 `;
                 planetInputsDiv.appendChild(inputGroup);
+
+                // Add planet to Karaka dropdown
+                const option = document.createElement('option');
+                option.value = planet;
+                option.textContent = planet;
+                karakaPlanetSelect.appendChild(option);
             });
         }
 
         /**
-         * Clears all planet displays in the horoscope boxes.
+         * Clears all planet displays in the horoscope boxes and karaka analysis boxes.
          */
-        function clearHoroscopeDisplay() {
+        function clearAllDisplays() {
             eastPlanetsDiv.innerHTML = '';
             southPlanetsDiv.innerHTML = '';
             westPlanetsDiv.innerHTML = '';
             northPlanetsDiv.innerHTML = '';
+
+            presentBox.innerHTML = '';
+            supportingBox.innerHTML = '';
+            futureBox.innerHTML = '';
+            pastBox.innerHTML = '';
         }
 
         /**
@@ -397,18 +510,20 @@
                 if (degreeInput) degreeInput.value = '';
             });
 
+            parsedPlanetsData = []; // Reset global parsed data
+
             relevantLines.forEach(line => {
                 const trimmedLine = line.trim();
                 if (!trimmedLine) return; // Skip empty lines
 
                 // Regex to capture the planet name and then longitude, ignoring specified keywords.
                 // It looks for a planet name, then optionally skips any combination of:
-                // - whitespace followed by "(R)"
-                // - whitespace followed by "-" and then one or more letters (like " - BK", " - PiK")
+                // - whitespace followed by "(R)" (now made non-capturing group with ?:)
+                // - whitespace followed by "-" and then one or more letters (like " - BK", " - PiK") (non-capturing group with ?:)
                 // - general whitespace
-                // This is done non-greedily `*?` to ensure it doesn't consume the longitude parts.
-                const regex = new RegExp(`^(${planets.join('|')})\\s*(?:\\s*\\(R\\)|\\s*-\\s*[A-Za-z]+|\\s+)*?(\\d{1,2})\\s+([A-Za-z]{2})\\s+(\\d{1,2})'\\s+(\\d{1,2}(?:\\.\\d{1,2})?)"`);
+                const regex = new RegExp(`^(${planets.join('|')})\\s*(?:[A-Za-z0-9\\s\\(\\)-]+?)?(\\d{1,2})\\s+([A-Za-z]{2})\\s+(\\d{1,2})'\\s+(\\d{1,2}(?:\\.\\d{1,2})?)"`);
                 const match = trimmedLine.match(regex);
+
 
                 if (match) {
                     const planetName = match[1];
@@ -446,22 +561,22 @@
                 showMessage('No valid planet data found in the pasted text. Please check the format.', 'error');
             }
         }
-
         /**
          * Generates and displays the horoscope based on user input from individual fields.
          */
         function generateHoroscope() {
-            clearHoroscopeDisplay(); // Clear previous display
+            clearAllDisplays(); // Clear all displays before generating new charts
 
-            // Map astrological directions to their display positions
-            const displayPositionToPlanets = {
-                'East': [],  // This will be the top box
-                'South': [], // This will be the right box
-                'West': [],  // This will be the left box
-                'North': []  // This will be the bottom box
+            // Re-collect planets data for the main chart
+            const planetsByDirection = {
+                'East': [],
+                'South': [],
+                'West': [],
+                'North': []
             };
 
             let isValid = true; // Flag to check if all inputs are valid
+            parsedPlanetsData = []; // Clear and re-populate global parsed data
 
             planets.forEach(planetName => {
                 const rasiSelect = document.getElementById(`${planetName.toLowerCase()}Rasi`);
@@ -472,58 +587,57 @@
 
                 // Input validation
                 if (!rasi) {
-                    // Only show error if degree is also entered, implying an attempt to enter data
-                    if (degreeInput.value !== '') {
+                    if (degreeInput.value !== '') { // Only show error if degree input was attempted
                         showMessage(`Please select a Rasi for ${planetName}.`, 'error');
                         isValid = false;
                     }
-                    return; // Skip this planet if Rasi is not selected or degree is empty
+                    return;
                 }
                 if (isNaN(degree) || degree < 0 || degree >= 30) {
                     showMessage(`Please enter a valid degree (0.00 - 29.99) for ${planetName}.`, 'error');
                     isValid = false;
-                    return; // Skip this planet if degree is invalid
+                    return;
                 }
 
                 const planetInfo = {
                     name: planetName,
                     rasi: rasi,
-                    degree: degree // Store as decimal for sorting
+                    degree: degree
                 };
 
                 const astrologicalDirection = rasiData[rasi].direction;
                 if (astrologicalDirection) {
-                    displayPositionToPlanets[astrologicalDirection].push(planetInfo);
+                    planetsByDirection[astrologicalDirection].push(planetInfo);
+                    parsedPlanetsData.push(planetInfo); // Store for Karaka analysis
                 }
             });
 
             if (!isValid) {
-                return; // Stop if any input was invalid
+                return;
             }
 
             // Sort planets within each astrological direction and render them to their respective display boxes
-            for (const astrologicalDirection in displayPositionToPlanets) {
-                displayPositionToPlanets[astrologicalDirection].sort((a, b) => a.degree - b.degree); // Sort by degree
+            for (const astrologicalDirection in planetsByDirection) {
+                planetsByDirection[astrologicalDirection].sort((a, b) => a.degree - b.degree); // Sort by degree
 
                 let targetDiv;
                 if (astrologicalDirection === 'East') {
-                    targetDiv = eastPlanetsDiv; // East is top
+                    targetDiv = eastPlanetsDiv;
                 } else if (astrologicalDirection === 'South') {
-                    targetDiv = southPlanetsDiv; // South is right
+                    targetDiv = southPlanetsDiv;
                 } else if (astrologicalDirection === 'West') {
-                    targetDiv = westPlanetsDiv; // West is left
+                    targetDiv = westPlanetsDiv;
                 } else if (astrologicalDirection === 'North') {
-                    targetDiv = northPlanetsDiv; // North is bottom
+                    targetDiv = northPlanetsDiv;
                 }
 
                 if (targetDiv) {
-                    if (displayPositionToPlanets[astrologicalDirection].length === 0) {
+                    if (planetsByDirection[astrologicalDirection].length === 0) {
                         targetDiv.innerHTML = '<p class="text-gray-500 text-sm">No planets in this section.</p>';
                     } else {
-                        displayPositionToPlanets[astrologicalDirection].forEach(planet => {
+                        planetsByDirection[astrologicalDirection].forEach(planet => {
                             const planetDiv = document.createElement('div');
                             planetDiv.className = 'planet-item';
-                            // Display degree in DMS format
                             const dmsString = convertDecimalToDMSString(planet.degree);
                             planetDiv.innerHTML = `
                                 <span class="font-medium">${planet.name}</span>
@@ -537,13 +651,104 @@
             showMessage('Horoscope generated successfully!', 'info');
         }
 
+        /**
+         * Clears the karaka analysis boxes.
+         */
+        function clearKarakaAnalysisDisplays() {
+            presentBox.innerHTML = '';
+            supportingBox.innerHTML = '';
+            futureBox.innerHTML = '';
+            pastBox.innerHTML = '';
+        }
+
+        /**
+         * Performs Karaka planet analysis and populates the related boxes.
+         */
+        function analyzeKaraka() {
+            clearKarakaAnalysisDisplays(); // Clear previous analysis
+
+            const selectedKarakaPlanetName = karakaPlanetSelect.value;
+            if (!selectedKarakaPlanetName) {
+                showMessage('Please select a Karaka Planet to analyze.', 'error');
+                return;
+            }
+
+            if (parsedPlanetsData.length === 0) {
+                 showMessage('Please generate the horoscope first by parsing data or entering manually.', 'error');
+                 return;
+            }
+
+            const karakaPlanetInfo = parsedPlanetsData.find(p => p.name === selectedKarakaPlanetName);
+
+            if (!karakaPlanetInfo) {
+                showMessage(`Could not find Rasi information for ${selectedKarakaPlanetName}. Please ensure data is correctly parsed/entered.`, 'error');
+                return;
+            }
+
+            const karakaDirection = rasiData[karakaPlanetInfo.rasi].direction;
+            if (!karakaDirection) {
+                showMessage(`Could not determine direction for ${karakaPlanetInfo.rasi}.`, 'error');
+                return;
+            }
+
+            const presentDirection = karakaDirection;
+            const supportingDirection = directionRelationships[karakaDirection].opposite;
+            const futureDirection = directionRelationships[karakaDirection].clockwise90;
+
+            // Determine the remaining direction
+            const allDirections = ['East', 'South', 'West', 'North'];
+            const usedDirections = [presentDirection, supportingDirection, futureDirection];
+            const pastDirection = allDirections.find(dir => !usedDirections.includes(dir));
+
+            const planetsInPresent = parsedPlanetsData.filter(p => rasiData[p.rasi].direction === presentDirection);
+            const planetsInSupporting = parsedPlanetsData.filter(p => rasiData[p.rasi].direction === supportingDirection);
+            const planetsInFuture = parsedPlanetsData.filter(p => rasiData[p.rasi].direction === futureDirection);
+            const planetsInPast = parsedPlanetsData.filter(p => rasiData[p.rasi].direction === pastDirection);
+
+            // Sort planets within each category by degree
+            planetsInPresent.sort((a, b) => a.degree - b.degree);
+            planetsInSupporting.sort((a, b) => a.degree - b.degree);
+            planetsInFuture.sort((a, b) => a.degree - b.degree);
+            planetsInPast.sort((a, b) => a.degree - b.degree);
+
+            // Render to boxes
+            const renderPlanets = (targetDiv, planetList) => {
+                if (planetList.length === 0) {
+                    targetDiv.innerHTML = '<p class="text-gray-500 text-sm">No planets here.</p>';
+                } else {
+                    targetDiv.innerHTML = ''; // Clear previous content
+                    planetList.forEach(planet => {
+                        const planetDiv = document.createElement('div');
+                        planetDiv.className = 'planet-item';
+                        const dmsString = convertDecimalToDMSString(planet.degree);
+                        // Make planet name bold and smaller degree text for clarity
+                        planetDiv.innerHTML = `
+                            <span class="font-medium">${planet.name}</span>
+                            <span class="text-xs">${planet.rasi} (${dmsString})</span>
+                        `;
+                        targetDiv.appendChild(planetDiv);
+                    });
+                }
+            };
+
+            renderPlanets(presentBox, planetsInPresent);
+            renderPlanets(supportingBox, planetsInSupporting);
+            renderPlanets(futureBox, planetsInFuture);
+            renderPlanets(pastBox, planetsInPast);
+
+            showMessage(`Karaka analysis for ${selectedKarakaPlanetName} complete!`, 'info');
+        }
+
+
         // Event Listeners
         generateHoroscopeBtn.addEventListener('click', generateHoroscope);
         parseDataBtn.addEventListener('click', parseAndPopulateData);
+        analyzeKarakaBtn.addEventListener('click', analyzeKaraka);
 
-        // Initialize the input fields when the page loads
+        // Initialize the input fields and Karaka dropdown when the page loads
         window.onload = initializePlanetInputs;
 
     </script>
 </body>
 </html>
+
